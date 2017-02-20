@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+    <http:listener-config name="Currency_Listener_Configuration" host="0.0.0.0" port="8999" doc:name="HTTP Listener Configuration"/>
+    <http:request-config name="OpenExchange_Request_Configuration" protocol="HTTPS" host="openexchangerates.org" port="443" doc:name="HTTP Request Configuration"/>
+    <flow name="currencyFlow">
+        <http:listener config-ref="Currency_Listener_Configuration" path="/*" allowedMethods="POST" doc:name="HTTP"/>
+        <byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+        <set-variable variableName="currency" value="#[json:currency]" doc:name="Variable"/>
+        <http:request config-ref="OpenExchange_Request_Configuration" path="/api/currencies.json" method="GET" doc:name="HTTP"/>
+        <json:json-to-object-transformer doc:name="JSON to Object" returnClass="java.util.HashMap"/>
+        <validation:all doc:name="Validation">
+            <validation:validations>
+                <validation:is-not-empty value="#[payload]"/>
+                <validation:is-not-null value="#[payload[flowVars.currency]]"/>
+            </validation:validations>
+        </validation:all>
+        <logger message="#[payload[flowVars.currency]]" level="INFO" doc:name="Logger"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <set-payload value="#[payload]" doc:name="Set Payload"/>
+    </flow>
+</mule>
